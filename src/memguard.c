@@ -31,6 +31,7 @@
 #include "noftypes.h"
 #include "memguard.h"
 #include "log.h"
+#include "osd.h"
 
 /* Maximum number of allocated blocks at any one time */
 #define MAX_BLOCKS 4096
@@ -224,8 +225,8 @@ static void mem_deleteblock(void *data, char *file, int line)
       {
          if (mem_checkguardblock(mem_record[i].block_addr, GUARD_LENGTH))
          {
-            sprintf(fail, "mem_deleteblock 0x%08X at line %d of %s -- block corrupt",
-                    (uint32)data, line, file);
+            sprintf(fail, "mem_deleteblock 0x%08lX at line %d of %s -- block corrupt",
+                    (uintptr_t)data, line, file);
             ASSERT_MSG(fail);
          }
 
@@ -234,8 +235,8 @@ static void mem_deleteblock(void *data, char *file, int line)
       }
    }
 
-   sprintf(fail, "mem_deleteblock 0x%08X at line %d of %s -- block not found",
-           (uint32)data, line, file);
+   sprintf(fail, "mem_deleteblock 0x%08lX at line %d of %s -- block not found",
+           (uintptr_t)data, line, file);
    ASSERT_MSG(fail);
 }
 #endif /* NOFRENDO_DEBUG */
@@ -396,7 +397,7 @@ void mem_checkleaks(void)
          if (mem_record[i].block_addr)
          {
             nofrendo_log_printf("addr: 0x%08X, size: %d, line %d of %s%s\n",
-                                (uint32)mem_record[i].block_addr,
+                                (uintptr_t)mem_record[i].block_addr,
                                 mem_record[i].block_size,
                                 mem_record[i].line_num,
                                 mem_record[i].file_name,
@@ -426,7 +427,7 @@ void mem_checkblocks(void)
          if (mem_checkguardblock(mem_record[i].block_addr, GUARD_LENGTH))
          {
             nofrendo_log_printf("addr: 0x%08X, size: %d, line %d of %s -- block corrupt\n",
-                                (uint32)mem_record[i].block_addr,
+                                (uintptr_t)mem_record[i].block_addr,
                                 mem_record[i].block_size,
                                 mem_record[i].line_num,
                                 mem_record[i].file_name);

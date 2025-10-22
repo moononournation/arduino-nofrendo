@@ -250,13 +250,6 @@ static void build_address_handlers(nes_t *machine)
 /* raise an IRQ */
 void nes_irq(void)
 {
-#ifdef NOFRENDO_DEBUG
-#ifdef NOFRENDO_DOUBLE_FRAMEBUFFER
-   if (nes.scanline <= NES_SCREEN_HEIGHT)
-      memset(nes.vidbuf->line[nes.scanline - 1], GUI_RED, NES_SCREEN_WIDTH);
-#endif /* NOFRENDO_DOUBLE_FRAMEBUFFER */
-#endif /* NOFRENDO_DEBUG */
-
    nes6502_irq();
 }
 
@@ -304,11 +297,8 @@ static void nes_renderframe(bool draw_flag)
 
    while (262 != nes.scanline)
    {
-#ifdef NOFRENDO_DOUBLE_FRAMEBUFFER
-      ppu_scanline(nes.vidbuf, nes.scanline, draw_flag);
-#else  /* !NOFRENDO_DOUBLE_FRAMEBUFFER */
+
       ppu_scanline(vid_getbuffer(), nes.scanline, draw_flag);
-#endif /* !NOFRENDO_DOUBLE_FRAMEBUFFER */
 
       if (241 == nes.scanline)
       {
@@ -347,12 +337,6 @@ static void system_video(bool draw)
       gui_frame(false);
       return;
    }
-
-#ifdef NOFRENDO_DOUBLE_FRAMEBUFFER
-   /* blit the NES screen to our video surface */
-   vid_blit(nes.vidbuf, 0, (NES_SCREEN_HEIGHT - NES_VISIBLE_HEIGHT) / 2,
-            0, 0, NES_SCREEN_WIDTH, NES_VISIBLE_HEIGHT);
-#endif /* NOFRENDO_DOUBLE_FRAMEBUFFER */
 
    /* overlay our GUI on top of it */
    gui_frame(true);
@@ -446,10 +430,6 @@ void nes_destroy(nes_t **machine)
       ppu_destroy(&(*machine)->ppu);
       apu_destroy(&(*machine)->apu);
 
-#ifdef NOFRENDO_DOUBLE_FRAMEBUFFER
-      bmp_destroy(&(*machine)->vidbuf);
-#endif /* NOFRENDO_DOUBLE_FRAMEBUFFER */
-
       if ((*machine)->cpu)
       {
          if ((*machine)->cpu->mem_page[0])
@@ -524,14 +504,6 @@ nes_t *nes_create(void)
       return NULL;
 
    memset(machine, 0, sizeof(nes_t));
-
-   /* bitmap */
-   /* 8 pixel overdraw */
-#ifdef NOFRENDO_DOUBLE_FRAMEBUFFER
-   machine->vidbuf = bmp_create(NES_SCREEN_WIDTH, NES_SCREEN_HEIGHT, 8);
-   if (NULL == machine->vidbuf)
-      goto _fail;
-#endif /* NOFRENDO_DOUBLE_FRAMEBUFFER */
 
    machine->autoframeskip = true;
 

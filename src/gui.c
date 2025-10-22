@@ -75,11 +75,9 @@ void gui_savesnap(void)
    if (osd_makesnapname(filename, PATH_MAX) < 0)
       return;
 
-#ifdef NOFRENDO_DOUBLE_FRAMEBUFFER
-   if (pcx_write(filename, nes->vidbuf, nes->ppu->curpal))
-#else /* !NOFRENDO_DOUBLE_FRAMEBUFFER */
+
    if (pcx_write(filename, vid_getbuffer(), nes->ppu->curpal))
-#endif /* !NOFRENDO_DOUBLE_FRAMEBUFFER */
+
 
       return;
 

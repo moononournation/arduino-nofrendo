@@ -43,8 +43,8 @@
 #define PPU_MEM(x) ppu.page[(x) >> 10][(x)]
 
 /* Background (color 0) and solid sprite pixel flags */
-#define BG_TRANS 0x80
-#define SP_PIXEL 0x40
+#define BG_TRANS 0x80U
+#define SP_PIXEL 0x40U
 #define BG_CLEAR(V) ((V)&BG_TRANS)
 #define BG_SOLID(V) (0 == BG_CLEAR(V))
 #define SP_CLEAR(V) (0 == ((V)&SP_PIXEL))
@@ -62,7 +62,7 @@ void ppu_displaysprites(bool display)
 
 void ppu_setcontext(ppu_t *src_ppu)
 {
-   int nametab[4];
+   uint32 nametab[4];
    ASSERT(src_ppu);
    ppu = *src_ppu;
 
@@ -577,7 +577,6 @@ INLINE void draw_bgtile(uint8 *surface, uint8 pat1, uint8 pat2,
                         const uint8 *colors)
 {
    uint32 pattern = ((pat2 & 0xAA) << 8) | ((pat2 & 0x55) << 1) | ((pat1 & 0xAA) << 7) | (pat1 & 0x55);
-
    *surface++ = colors[(pattern >> 14) & 3];
    *surface++ = colors[(pattern >> 6) & 3];
    *surface++ = colors[(pattern >> 12) & 3];
@@ -702,7 +701,6 @@ static void ppu_renderbg(uint8 *vidbuf)
       memset(vidbuf, FULLBG, NES_SCREEN_WIDTH);
       return;
    }
-
    bmp_ptr = vidbuf - ppu.tile_xofs;              /* scroll x */
    refresh_vaddr = 0x2000 + (ppu.vaddr & 0x0FE0); /* mask out x tile */
    x_tile = ppu.vaddr & 0x1F;
@@ -719,8 +717,11 @@ static void ppu_renderbg(uint8 *vidbuf)
 
    /* ppu fetches 33 tiles */
    tile_count = 33;
+      
    while (tile_count--)
    {
+      // printf("bmp_ptr = %p, vidbuf = %p, offset = %ld\n", 
+      //  (void*)bmp_ptr, (void*)vidbuf, bmp_ptr - vidbuf);
       /* Tile number from nametable */
       tile_index = *tile_ptr++;
       data_ptr = &PPU_MEM(bg_offset + (tile_index << 4));
@@ -728,7 +729,7 @@ static void ppu_renderbg(uint8 *vidbuf)
       /* Handle $FD/$FE tile VROM switching (PunchOut) */
       if (ppu.latchfunc)
          ppu.latchfunc(ppu.bg_base, tile_index);
-
+      // Shit is happening here
       draw_bgtile(bmp_ptr, data_ptr[0], data_ptr[8], ppu.palette + col_high);
       bmp_ptr += 8;
 
@@ -825,6 +826,9 @@ static void ppu_renderoam(uint8 *vidbuf, int scanline)
       sprite_x = sprite_ptr->x_loc;
       tile_index = sprite_ptr->tile;
       attrib = sprite_ptr->atr;
+      if (sprite_x > NES_SCREEN_WIDTH)
+          continue;
+
 
       bmp_ptr = buf_ptr + sprite_x;
 
@@ -1173,7 +1177,6 @@ static void draw_sprite(bitmap_t *bmp, int x, int y, uint8 tile_num, uint8 attri
       vram_adr = ppu.obj_base + (tile_num << 4);
 
    data_ptr = &PPU_MEM(vram_adr);
-
    for (line = 0; line < height; line++)
    {
       if (line == 8)
@@ -1234,7 +1237,6 @@ void ppu_dumppattern(bitmap_t *bmp, int table_num, int x_loc, int y_loc, int col
       {
          data_ptr = &PPU_MEM((table_num << 12) + (tile_num << 4));
          ptr = bmp_ptr;
-
          for (line = 0; line < 8; line++)
          {
             draw_bgtile(ptr, data_ptr[0], data_ptr[8], ppu.palette + col_high);

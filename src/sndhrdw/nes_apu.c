@@ -730,13 +730,11 @@ void apu_write(uint32 address, uint8 value)
       break;
 
    case APU_WRE1: /* 7-bit DAC */
-      /* add the _delta_ between written value and
-      ** current output level of the volume reg
-      */
+      // $4011 is a direct write
+      // https://www.nesdev.org/wiki/APU_DMC
       value &= 0x7F; /* bit 7 ignored */
-      apu.dmc.output_vol += ((value - apu.dmc.regs[1]) << 8);
+      apu.dmc.output_vol = ((value) << 8);
       apu.dmc.regs[1] = value;
-      break;
 
    case APU_WRE2:
       apu.dmc.regs[2] = value;

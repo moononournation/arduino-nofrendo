@@ -94,9 +94,16 @@ static void rom_savesram(rominfo_t *rominfo)
       fp = fopen(fn, "wb");
       if (NULL != fp)
       {
-         fwrite(rominfo->sram, SRAM_BANK_LENGTH, rominfo->sram_banks, fp);
-         fclose(fp);
-         nofrendo_log_printf("Wrote battery RAM to %s.\n", fn);
+         if (rominfo->sram){
+            fwrite(rominfo->sram, SRAM_BANK_LENGTH, rominfo->sram_banks, fp);
+            fclose(fp);
+            nofrendo_log_printf("Wrote battery RAM to %s.\n", fn);
+         }
+         else
+         {
+            fclose(fp);
+            nofrendo_log_printf("Wrote battery RAM to %s failed.\n", fn);
+         }
       }
    }
 }

@@ -35,12 +35,10 @@
 /* hardware surface */
 static bitmap_t *screen = NULL;
 
-/* primary / backbuffer surfaces */
-#ifdef NOFRENDO_DOUBLE_FRAMEBUFFER
-static bitmap_t *primary_buffer = NULL, *back_buffer = NULL;
-#else /* !NOFRENDO_DOUBLE_FRAMEBUFFER */
+/* primary surface */
+// backbuffer_stuff should be done outside
+
 static bitmap_t *primary_buffer = NULL;
-#endif /* !NOFRENDO_DOUBLE_FRAMEBUFFER */
 
 static viddriver_t *driver = NULL;
 
@@ -92,7 +90,7 @@ static viddriver_t *driver = NULL;
 INLINE int vid_memcmp(const void *p1, const void *p2, int len)
 {
    /* check for 32-bit aligned data */
-   if (0 == (((uint32)p1 & 3) | ((uint32)p2 & 3)))
+   if (0 == (((uintptr_t)p1 & 3) | ((uintptr_t)p2 & 3)))
    {
       uint32 *dw1 = (uint32 *)p1;
       uint32 *dw2 = (uint32 *)p2;
@@ -140,7 +138,7 @@ INLINE void vid_memcpy(void *dest, const void *src, int len)
    uint32 *s = (uint32 *)src;
    uint32 *d = (uint32 *)dest;
 
-   ASSERT(0 == ((len & 3) | ((uint32)src & 3) | ((uint32)dest & 3)));
+   ASSERT(0 == ((len & 3) | ((uintptr_t)src & 3) | ((uintptr_t)dest & 3)));
    len >>= 2;
 
    DUFFS_DEVICE(*d++ = *s++, len);
@@ -386,13 +384,6 @@ void vid_flush(void)
       driver->custom_blit(primary_buffer, num_dirties, dirty_rects);
    else
       vid_blitscreen(num_dirties, dirty_rects);
-
-#ifdef NOFRENDO_DOUBLE_FRAMEBUFFER
-   /* Swap pointers to the main/back buffers */
-   temp = back_buffer;
-   back_buffer = primary_buffer;
-   primary_buffer = temp;
-#endif /* NOFRENDO_DOUBLE_FRAMEBUFFER */
 }
 
 /* emulated machine tells us which resolution it wants */
@@ -400,30 +391,13 @@ int vid_setmode(int width, int height)
 {
    if (NULL != primary_buffer)
       bmp_destroy(&primary_buffer);
-#ifdef NOFRENDO_DOUBLE_FRAMEBUFFER
-   if (NULL != back_buffer)
-      bmp_destroy(&back_buffer);
-#endif /* NOFRENDO_DOUBLE_FRAMEBUFFER */
 
-   primary_buffer = bmp_create(width, height, 0); /* no overdraw */
+   primary_buffer = bmp_create(width, height, 8); /* overdraw 8 */
    if (NULL == primary_buffer)
       return -1;
 
-#ifdef NOFRENDO_DOUBLE_FRAMEBUFFER
-   /* Create our backbuffer */
-   back_buffer = bmp_create(width, height, 0); /* no overdraw */
-   if (NULL == back_buffer)
-   {
-      bmp_destroy(&primary_buffer);
-      return -1;
-   }
-#endif /* NOFRENDO_DOUBLE_FRAMEBUFFER */
 
    bmp_clear(primary_buffer, GUI_BLACK);
-
-#ifdef NOFRENDO_DOUBLE_FRAMEBUFFER
-   bmp_clear(back_buffer, GUI_BLACK);
-#endif /* NOFRENDO_DOUBLE_FRAMEBUFFER */
 
    return 0;
 }
@@ -440,7 +414,8 @@ static int vid_findmode(int width, int height, viddriver_t *osd_driver)
    driver = osd_driver;
 
    /* re-assert dimensions, clear the surface */
-   screen = driver->lock_write();
+   if (driver->lock_write)
+      screen = driver->lock_write();
 
    /* use custom pageclear, if necessary */
    if (driver->clear)
@@ -448,12 +423,14 @@ static int vid_findmode(int width, int height, viddriver_t *osd_driver)
    else
       bmp_clear(screen, GUI_BLACK);
 
+   if (screen)
+      nofrendo_log_printf("video driver: %s at %dx%d\n", driver->name,
+                       screen->width, screen->height);
+
    /* release surface */
    if (driver->free_write)
       driver->free_write(-1, NULL);
 
-   nofrendo_log_printf("video driver: %s at %dx%d\n", driver->name,
-                       screen->width, screen->height);
 
    return 0;
 }
@@ -478,11 +455,6 @@ void vid_shutdown(void)
 
    if (NULL != primary_buffer)
       bmp_destroy(&primary_buffer);
-
-#ifdef NOFRENDO_DOUBLE_FRAMEBUFFER
-   if (NULL != back_buffer)
-      bmp_destroy(&back_buffer);
-#endif /* NOFRENDO_DOUBLE_FRAMEBUFFER */
 
    if (driver && driver->shutdown)
       driver->shutdown();

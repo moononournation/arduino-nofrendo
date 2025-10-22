@@ -1,0 +1,4 @@
+*.o
+*.pch
+.vscode*
+vgcore.*

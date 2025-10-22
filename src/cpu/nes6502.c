@@ -1137,7 +1137,8 @@ static uint8 null_page[NES6502_BANKSIZE];
 */
 INLINE uint32 zp_readword(register uint8 address)
 {
-   return (uint32)(*(uint16 *)(ram + address));
+   // return (uint32)(*(uint16 *)(ram + address));
+   return ram[address] | (ram[address + 1] << 8);
 }
 
 INLINE uint32 bank_readword(register uint32 address)
@@ -1147,7 +1148,10 @@ INLINE uint32 bank_readword(register uint32 address)
    ** be fetching a word across page boundaries, which only would
    ** make sense if the banks were physically consecutive.
    */
-   return (uint32)(*(uint16 *)(cpu.mem_page[address >> NES6502_BANKSHIFT] + (address & NES6502_BANKMASK)));
+   // return (uint32)(*(uint16 *)(cpu.mem_page[address >> NES6502_BANKSHIFT] + (address & NES6502_BANKMASK)));
+
+    uint8 *ptr = cpu.mem_page[address >> NES6502_BANKSHIFT] + (address & NES6502_BANKMASK);
+    return (uint32)ptr[0] | ((uint32)ptr[1] << 8);
 }
 
 #else /* !HOST_LITTLE_ENDIAN */
